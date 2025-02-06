@@ -9,7 +9,8 @@ const KeyTokenService = require('../services/keyToken.service');
 const HEADER = {
     API_KEY: 'x-api-key',
     CLIENT_ID: 'x-client-id',
-    AUTHORIZATION: 'authorization'
+    AUTHORIZATION: 'authorization',
+    REFRESHTOKEN: 'x-rtoken-id'
 }
 
 const generateKeyPair = async () => {
@@ -79,6 +80,24 @@ const authentication = asyncHandler( async ( req, res, next ) => {
         throw new NotFoundError('Error::: user is not exists')
     }
 
+    // chứa refreshToken => trường hợp token hết hạn
+    const refreshToken = req.headers[HEADER.REFRESHTOKEN];
+    if(refreshToken) {
+        try {
+            const decoded = JWT.verify(refreshToken, keyToken.publicKey);
+            if(decoded.userId !== userId) {
+                throw new AuthFailureError('Error::: invalid token')
+            }
+            req.user = decoded;
+            req.refreshToken = refreshToken;
+            req.keyToken = keyToken;
+            return next();
+        } catch (error) {
+            throw error
+        }
+    }
+
+    // trường hợp client gửi req bình thường 
     const accessToken = req.headers[HEADER.AUTHORIZATION];
     if(!accessToken) {
         throw new AuthFailureError('Error::: accessToken missing')
@@ -91,9 +110,8 @@ const authentication = asyncHandler( async ( req, res, next ) => {
         }
         
         req.keyToken = keyToken;
-        next();
+        return next();
     } catch (error) {
-        console.log(accessToken)
         throw error
     }
 })

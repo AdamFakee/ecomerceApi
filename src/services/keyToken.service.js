@@ -45,7 +45,7 @@ class KeyTokenService {
     static findByRefreshToken = async ( refreshToken ) => {
         return await keyTokenModel.findOne({ refreshToken });
     }
-    static update = async ({ id ,refreshToken }) => {
+    static update = async ({ id ,refreshToken, refreshTokenUsed }) => {
         return await keyTokenModel.updateOne({
             _id: id
         },{
@@ -53,7 +53,7 @@ class KeyTokenService {
                 refreshToken: refreshToken
             },
             $addToSet: {
-                refreshTokenUsed: refreshToken
+                refreshTokenUsed: refreshTokenUsed
             }
         })
     }

@@ -107,7 +107,7 @@ class AccessService {
         return delKey;
     }
 
-    static handleRefreshToken = async ( refreshToken ) => {
+    static handleRefreshToken = async (keyToken, user, refreshToken ) => {
         /* 
             1. find refreshToken is used in db or not?
 
@@ -122,44 +122,74 @@ class AccessService {
                 5. return 
 
         */
-        const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken);
-        if(foundToken) {
-            const { userId } = await verifyToken( refreshToken, foundToken.privateKey );
-            await KeyTokenService.deleteByUserId( userId );
-            throw new ForbiddenRequestError('Error::: something wrong!! Pls re-login');
-        }
-
-        // keyToken of shop in keyTokenModel
-        const holderShop = await KeyTokenService.findByRefreshToken( refreshToken );
-        if( !holderShop ) {
+        const { userId, email } = user;
+        if( keyToken.refreshTokenUsed.includes(refreshToken) || keyToken.refreshToken !== refreshToken) {
             throw new AuthFailureError('Error::: something wrong!! Pls re-login')
         }
-        
-        // verify token
-        const { userId, email } = await verifyToken( refreshToken, holderShop.publicKey );
+
+        // check exist shopshop
         const foundShop = await shopService.findByEmail({ email });
         if( !foundShop ) {
             throw new AuthFailureError('Error::: shop not register')
         }
 
         // create new token
-        console.log(holderShop)
         const tokens = await createTokenPair(
             { userId: foundShop._id, email },
-            holderShop.publicKey,
-            holderShop.privateKey
+            keyToken.publicKey,
+            keyToken.privateKey
         )
 
         // update refresh token
         await KeyTokenService.update({
-            id: holderShop._id,
-            refreshToken: tokens.refreshToken
+            id: keyToken._id,
+            refreshToken: tokens.refreshToken, // rToken vừa tạo mới
+            refreshTokenUsed: refreshToken // rToken gửi lên để cấp cặp token 
         })
 
         return {
-            user: { userId, email},
+            user,
             tokens
         }
+        
+        // const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken);
+        // if(foundToken) {
+        //     const { userId } = await verifyToken( refreshToken, foundToken.privateKey );
+        //     await KeyTokenService.deleteByUserId( userId );
+        //     throw new ForbiddenRequestError('Error::: something wrong!! Pls re-login');
+        // }
+
+        // // keyToken of shop in keyTokenModel
+        // const holderShop = await KeyTokenService.findByRefreshToken( refreshToken );
+        // if( !holderShop ) {
+        //     throw new AuthFailureError('Error::: something wrong!! Pls re-login')
+        // }
+        
+        // // verify token
+        // const { userId, email } = await verifyToken( refreshToken, holderShop.publicKey );
+        // const foundShop = await shopService.findByEmail({ email });
+        // if( !foundShop ) {
+        //     throw new AuthFailureError('Error::: shop not register')
+        // }
+
+        // // create new token
+        // console.log(holderShop)
+        // const tokens = await createTokenPair(
+        //     { userId: foundShop._id, email },
+        //     holderShop.publicKey,
+        //     holderShop.privateKey
+        // )
+
+        // // update refresh token
+        // await KeyTokenService.update({
+        //     id: holderShop._id,
+        //     refreshToken: tokens.refreshToken
+        // })
+
+        // return {
+        //     user: { userId, email},
+        //     tokens
+        // }
     }
 }
 
