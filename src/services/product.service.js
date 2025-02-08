@@ -2,6 +2,7 @@
 
 const { BadRequestError, NotFoundError } = require('../core/error.response');
 const { product, electronic, clothing } = require('../models/product.model');
+const { createInventory } = require('../models/repositories/inventory.repo');
 const { publishProductByShop, unPublishProductByShop, findAllPublishForShop, findAllProducts, findProductById, findAllDraftsForShop, updateProductById } = require('../models/repositories/product.repo');
 const { convertNestedObject, removeUndefinedObject, getInfoData } = require('../utils');
 
@@ -151,10 +152,24 @@ class Product {
      * @returns 
      */
     async creatProduct (productId) {
-        return await product.create({
+        const newProduct = await product.create({
             ...this,
             _id: productId
         });
+        
+        // create new inventory
+        if( !newProduct ) {
+            throw new BadRequestError('Error::: create product fail')
+        } else {
+            await createInventory({
+                inven_productId: newProduct._id,
+                inven_shopId: newProduct.product_shop,
+                inven_stock: newProduct.product_quantity
+            })
+        }
+
+        return newProduct
+
     }
 
     /**
@@ -185,10 +200,7 @@ class Clothing extends Product{
         // id clothing = id product vì click vào => truy vấn luôn chứ k cần mò id mới
         // tuy nhiên chưa hiểu mục đích tách biệt attribute ra 1 collection riêng để làm gì trong khi xem chi tiết sản phẩm thì cũng cần link ảnh.....
         const newProduct = await super.creatProduct(newClothing._id);
-        if( !newProduct ) {
-            throw new BadRequestError('Error::: create product fail')
-        }
-
+        
         return newProduct;
     }
 
@@ -226,9 +238,6 @@ class Electronic extends Product{
         }
 
         const newProduct = await super.creatProduct(newElectronic._id);
-        if( !newProduct ) {
-            throw new BadRequestError('Error::: create product fail')
-        }
 
         return newProduct;
     }
