@@ -70,6 +70,8 @@ const authentication = asyncHandler( async ( req, res, next ) => {
         4. check keyStore with this userId
         5. ok all => return next
     */
+
+        console.log('aut')
     const userId = req.headers[HEADER.CLIENT_ID];
     if(!userId) {
         throw new AuthFailureError('Error::: userId missing')
@@ -108,7 +110,7 @@ const authentication = asyncHandler( async ( req, res, next ) => {
         if(decoded.userId !== userId) {
             throw new AuthFailureError('Error::: invalid token')
         }
-        
+        req.user = decoded;
         req.keyToken = keyToken;
         return next();
     } catch (error) {
